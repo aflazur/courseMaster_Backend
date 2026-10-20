@@ -36,10 +36,10 @@ const getEnrollments = async (query) => {
     .sort({ createdAt: -1 });
 };
 
-// ✅ NEW: get all assignment submissions (Code-8 bug: queries by courseId instead of course)
+// get all assignment submissions (optionally filtered by course)
 const getAssignments = async (query = {}) => {
   const filter = {};
-  if (query.courseId) filter.courseId = query.courseId; // Mongoose schema has 'course', not 'courseId'
+  if (query.courseId) filter.course = query.courseId; // schema field is `course`
 
   const submissions = await AssignmentSubmission.find(filter)
     .populate("student", "name email")
@@ -75,6 +75,13 @@ const getAssignments = async (query = {}) => {
 // review/update an assignment submission (admin)
 const reviewAssignment = async (id, payload, adminId) => {
   const { reviewNotes, grade, status } = payload;
+
+  if (typeof grade !== "undefined" && (typeof grade !== "number" || Number.isNaN(grade) || grade < 0 || grade > 100)) {
+    throw new Error("Grade must be a number between 0 and 100");
+  }
+  if (typeof status !== "undefined" && !["submitted", "reviewed"].includes(status)) {
+    throw new Error("Invalid status");
+  }
 
   const update = {};
   if (typeof status !== "undefined") update.status = status;
